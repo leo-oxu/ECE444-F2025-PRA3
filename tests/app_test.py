@@ -21,10 +21,12 @@ def client():
         yield app.test_client()  # tests run here
         db.drop_all()  # teardown
 
+
 @app.route("/test_for_login_required")
 @login_required
 def login_required_sample():
-    return {'test': 10086, 'message': 'I am a test.'}
+    return {"test": 10086, "message": "I am a test."}
+
 
 def login(client, username, password):
     """Login helper function"""
@@ -81,6 +83,7 @@ def test_messages(client):
     assert b"&lt;Hello&gt;" in rv.data
     assert b"<strong>HTML</strong> allowed here" in rv.data
 
+
 def test_delete_message(client):
     """Ensure the messages are being deleted"""
     rv = client.get("/delete/1")
@@ -95,17 +98,20 @@ def test_delete_message(client):
 def test_search_message(client):
     """Ensure search results are returned"""
     with app.app_context():
-        db.session.add_all([
-            models.Post(title="Hello World", text="greet"),
-            models.Post(title="Flask Tips", text="ilike stuff"),
-        ])
+        db.session.add_all(
+            [
+                models.Post(title="Hello World", text="greet"),
+                models.Post(title="Flask Tips", text="ilike stuff"),
+            ]
+        )
         db.session.commit()
-    
+
     rv = client.get("/search/?query=hello")
     assert rv.status_code == 200
     # Because the view doesn't filter, both titles appear
     assert b"Hello World" in rv.data
     assert b"Flask Tips" not in rv.data
+
 
 def test_login_required_not_login(client):
     rv = client.get("/test_for_login_required")
@@ -119,11 +125,11 @@ def test_login_required_not_login(client):
         flashes = sess.get("_flashes", [])
     assert any(msg == "Please log in." for _, msg in flashes)
 
+
 def test_login_required_login(client):
     rv = login(client, app.config["USERNAME"], app.config["PASSWORD"])
 
     rv = client.get("/test_for_login_required")
     assert rv.status_code == 200
     assert rv.is_json
-    assert rv.get_json() == {'test': 10086, 'message': 'I am a test.'}
-
+    assert rv.get_json() == {"test": 10086, "message": "I am a test."}
