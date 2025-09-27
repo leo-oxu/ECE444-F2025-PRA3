@@ -4,6 +4,7 @@ from pathlib import Path
 import json
 
 from project.app import app, db
+from project import models
 
 TEST_DB = "test.db"
 
@@ -81,3 +82,19 @@ def test_delete_message(client):
     rv = client.get('/delete/1')
     data = json.loads(rv.data)
     assert data["status"] == 1
+
+
+def test_search_message(client):
+    """Ensure search results are returned"""
+    with app.app_context():
+        db.session.add_all([
+            models.Post(title="Hello World", text="greet"),
+            models.Post(title="Flask Tips", text="ilike stuff"),
+        ])
+        db.session.commit()
+    
+    rv = client.get("/search/?query=hello")
+    assert rv.status_code == 200
+    # Because the view doesn't filter, both titles appear
+    assert b"Hello World" in rv.data
+    assert b"Flask Tips" not in rv.data
