@@ -40,7 +40,7 @@
 
       <ul class="entries">
         {% for entry in entries %}
-        <li>
+        <li class="entry">
           <h2 id="{{ entry.id }}">{{ entry.title }}</h2>
           {{ entry.text|safe }}
         </li>
