@@ -3,7 +3,7 @@ import pytest
 from pathlib import Path
 import json
 
-from project.app import app, db
+from project.app import app, db, login_required
 from project import models
 
 TEST_DB = "test.db"
@@ -21,6 +21,10 @@ def client():
         yield app.test_client()  # tests run here
         db.drop_all()  # teardown
 
+@app.route("/test_for_login_required")
+@login_required
+def login_required_sample():
+    return {'test': 10086, 'message': 'I am a test.'}
 
 def login(client, username, password):
     """Login helper function"""
@@ -79,7 +83,11 @@ def test_messages(client):
 
 def test_delete_message(client):
     """Ensure the messages are being deleted"""
-    rv = client.get('/delete/1')
+    rv = client.get("/delete/1")
+    data = json.loads(rv.data)
+    assert data["status"] == 0
+    login(client, app.config["USERNAME"], app.config["PASSWORD"])
+    rv = client.get("/delete/1")
     data = json.loads(rv.data)
     assert data["status"] == 1
 
@@ -98,3 +106,24 @@ def test_search_message(client):
     # Because the view doesn't filter, both titles appear
     assert b"Hello World" in rv.data
     assert b"Flask Tips" not in rv.data
+
+def test_login_required_not_login(client):
+    rv = client.get("/test_for_login_required")
+    assert rv.status_code == 401
+    assert rv.is_json
+    data = rv.get_json()
+    assert data["status"] == 0
+    assert data["message"] == "Please log in."
+
+    with client.session_transaction() as sess:
+        flashes = sess.get("_flashes", [])
+    assert any(msg == "Please log in." for _, msg in flashes)
+
+def test_login_required_login(client):
+    rv = login(client, app.config["USERNAME"], app.config["PASSWORD"])
+
+    rv = client.get("/test_for_login_required")
+    assert rv.status_code == 200
+    assert rv.is_json
+    assert rv.get_json() == {'test': 10086, 'message': 'I am a test.'}
+
